@@ -126,19 +126,51 @@ cd Qwen3-TTS
 pip install -e .
 ```
 
-Additionally, we recommend using FlashAttention 2 to reduce GPU memory usage.
+Additionally, we recommend using **Flash Attention 2** for faster inference and lower GPU memory. The package is optional; the project runs without it but will show a warning and use a slower attention path.
+
+**Why flash-attn is not installed by default:** PyPI only distributes source for `flash-attn`. Building from source requires the CUDA toolkit and a matching PyTorch/CUDA combo, and often fails. The reliable way is to install a **prebuilt wheel** or build with the correct environment.
+
+**Option 1 — Prebuilt wheel (recommended, no compilation):**
+
+1. Install the rest of the project first: `uv sync` (or `pip install -e .`).
+2. Check your versions:
+   ```bash
+   python -c "import torch; print('PyTorch', torch.__version__, 'CUDA', torch.version.cuda)"
+   python -c "import sys; print('Python', sys.version_info[:2])"
+   ```
+3. Open the **[Flash Attention Wheel Finder](https://flashattn.dev)** and select:
+   - **Platform:** Linux x86_64 / Windows / etc.
+   - **Python:** e.g. 3.13
+   - **PyTorch:** must match your installed version (e.g. 2.10)
+   - **CUDA:** match your PyTorch build (e.g. 12.8)
+4. Copy the generated command (e.g. `uv pip install https://...whl` or `pip install https://...whl`) and run it in the same environment.
+
+If no wheel exists for your exact combo (e.g. PyTorch 2.10 + Python 3.13), the finder may list community wheels; otherwise use Option 2.
+
+**Option 2 — Build from source:**
+
+Your system CUDA must match PyTorch’s CUDA (see `torch.version.cuda`). Then:
 
 ```bash
+# With uv (after uv sync):
+uv pip install flash-attn --no-build-isolation
+
+# With pip:
 pip install -U flash-attn --no-build-isolation
 ```
 
-If your machine has less than 96GB of RAM and lots of CPU cores, run:
+If you have limited RAM, limit parallel jobs:
 
 ```bash
-MAX_JOBS=4 pip install -U flash-attn --no-build-isolation
+MAX_JOBS=4 uv pip install flash-attn --no-build-isolation
+# or: MAX_JOBS=4 pip install -U flash-attn --no-build-isolation
 ```
 
-Also, you should have hardware that is compatible with FlashAttention 2. Read more about it in the official documentation of the [FlashAttention repository](https://github.com/Dao-AILab/flash-attention). FlashAttention 2 can only be used when a model is loaded in `torch.float16` or `torch.bfloat16`.
+**Helper script:** From the project root, run `uv run python scripts/install_flash_attn.py` to print your Python/PyTorch/CUDA versions and the wheel finder link; use `--install` to attempt a source build (same as Option 2).
+
+**Optional extra (for lockfile only):** The project declares flash-attn as an optional dependency. Running `uv sync --extra flash` will try to resolve and install it; that often fails because the build needs an existing torch and no build isolation. Prefer Option 1 or 2 above.
+
+You should have hardware compatible with [Flash Attention 2](https://github.com/Dao-AILab/flash-attention). It is only used when the model is loaded in `torch.float16` or `torch.bfloat16`.
 
 
 ### Python Package Usage
